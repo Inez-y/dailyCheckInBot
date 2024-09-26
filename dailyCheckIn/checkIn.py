@@ -7,9 +7,9 @@ import os
 
 intents = discord.Intents.default()
 intents.message_content = True  
-intents.members = True        
+intents.members = True    
 
-# public key
+load_dotenv() # for ubuntu aws
 TOKEN = os.getenv('DISCORD_TOKEN')
 bot = commands.Bot(command_prefix='/', intents=intents)
 
