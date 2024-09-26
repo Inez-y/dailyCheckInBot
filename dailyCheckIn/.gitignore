@@ -1,0 +1,5 @@
+.env
+checkins.json
+.venv
+checkInBotKey
+key.pem
