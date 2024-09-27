@@ -156,15 +156,15 @@ async def prev_rankings(ctx):
 @bot.command(name='rankings')
 async def rankings(ctx):
     current_month = get_current_month()
-    
-    # Sort users by number of check-ins in the current month
+
+    # Sort users by number of check-ins in the current month, ensuring the 'month' key exists
     rankings = sorted(
-        [(user_id, data["checkins"], data["nickname"]) for user_id, data in checkin_data.items() if data["month"] == current_month],
+        [(user_id, data["checkins"], data["nickname"]) for user_id, data in checkin_data.items() if data.get("month") == current_month],
         key=lambda x: x[1],  # Sort by check-ins
         reverse=True
     )
 
-    # Limit the leaderboard to top 10 users
+    # Limit the leaderboard to the top 10 users
     top_rankings = rankings[:10]
 
     if top_rankings:
@@ -173,7 +173,6 @@ async def rankings(ctx):
         await ctx.send(f"**Current Month's Check-In Leaderboard ({current_month})**\n{leaderboard}")
     else:
         await ctx.send(f"No check-ins for this month yet!")
-
 
 # Run the program
 bot.run(TOKEN)
