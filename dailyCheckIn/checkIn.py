@@ -96,7 +96,7 @@ async def checkin(ctx):
     current_time = datetime.datetime.now()
     current_month = get_current_month()
 
-    # Initialize user data if not present
+    # Initialize user data if not present, ensuring 'month' is included
     if user_id not in checkin_data:
         checkin_data[user_id] = {
             "nickname": nickname,
@@ -106,7 +106,7 @@ async def checkin(ctx):
         }
 
     # Reset check-ins for a new month
-    if checkin_data[user_id]["month"] != current_month:
+    if checkin_data[user_id].get("month") != current_month:
         checkin_data[user_id] = {
             "nickname": nickname,
             "checkins": 0,
