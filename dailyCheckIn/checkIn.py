@@ -17,8 +17,10 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 # Load check-in data
 try:
     with open('checkins.json', 'r') as file:
+        print("Check in data file opened")
         checkin_data = json.load(file)
 except FileNotFoundError:
+    print("Check in data file not found")
     checkin_data = {}
 
 def save_checkin_data():
@@ -33,12 +35,15 @@ def get_current_month():
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
     if not daily_reset.is_running():
+        print("Daily reset function start")
         daily_reset.start()
     if not monthly_reset.is_running():
+        print("Monthly reset function start")
         monthly_reset.start()
 
 @tasks.loop(hours=24)
 async def daily_reset():
+    print("Daily reset function is working now...")
     now = datetime.datetime.now()
     # Calculate the time until midnight
     next_midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -52,12 +57,14 @@ async def daily_reset():
         if "last_checkin" in checkin_data[user_id]:
             checkin_data[user_id]["last_checkin"] = ""  # Reset last daily check-in
 
+    print("Saving data...")
     save_checkin_data()
-    # print("Daily check-ins have been reset at 00:00.")
+    print(f"Daily check-ins have been reset at {now}.")
 
 # This will run every 24 hours, but we will adjust it to reset only on the 1st of the month
 @tasks.loop(hours=24) 
 async def monthly_reset():
+    print("Monthly reset function is working now...")
     now = datetime.datetime.now()
     next_midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     time_until_midnight = (next_midnight - now).total_seconds()
@@ -86,6 +93,7 @@ async def monthly_reset():
                 checkin_data[user_id]["month"] = current_month
                 checkin_data[user_id]["last_checkin"] = ""
 
+        print("Saving data...")
         save_checkin_data()
         print(f"Monthly check-ins have been reset for the new month: {current_month}")
 
@@ -98,6 +106,7 @@ async def checkin(ctx):
 
     # Initialize user data if not present, ensuring 'month' is included
     if user_id not in checkin_data:
+        print("New user!")
         checkin_data[user_id] = {
             "nickname": nickname,
             "checkins": 0,
@@ -107,6 +116,7 @@ async def checkin(ctx):
 
     # Reset check-ins for a new month
     if checkin_data[user_id].get("month") != current_month:
+        print("Reset check ins for a new month")
         checkin_data[user_id] = {
             "nickname": nickname,
             "checkins": 0,
@@ -120,15 +130,18 @@ async def checkin(ctx):
         return
 
     # Update check-in data
+    print("Update checkin data")
     checkin_data[user_id]["checkins"] += 1
     checkin_data[user_id]["last_checkin"] = current_time.strftime("%Y-%m-%d")
     checkin_data[user_id]["nickname"] = nickname  # Update nickname if changed
+    print("Saving data...")
     save_checkin_data()
 
     await ctx.send(f'{ctx.author.mention}, you have successfully checked in for today! Total check-ins this month: {checkin_data[user_id]["checkins"]}')
 
 @bot.command(name='prev_rankings')
 async def prev_rankings(ctx):
+    print("prev_rankings function is working...")
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
     if "monthly_history" in checkin_data and previous_month in checkin_data["monthly_history"]:
@@ -155,6 +168,7 @@ async def prev_rankings(ctx):
 
 @bot.command(name='rankings')
 async def rankings(ctx):
+    print("Rankings function is working...")
     current_month = get_current_month()
 
     # Sort users by number of check-ins in the current month, ensuring the 'month' key exists
