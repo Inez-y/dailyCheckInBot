@@ -75,12 +75,8 @@ async def run_monthly_reset():
     if "monthly_history" not in checkin_data:
         checkin_data["monthly_history"] = {}
 
-    # Use .get("month") to avoid KeyError if the 'month' key is missing
-    monthly_rankings = {
-        user_id: user_data["checkins"]
-        for user_id, user_data in checkin_data.items()
-        if user_data.get("month") == previous_month
-    }
+    # Gather the check-ins for the previous month
+    monthly_rankings = {user_id: user_data["checkins"] for user_id, user_data in checkin_data.items() if user_data.get("month") == previous_month}
 
     # Only save non-empty rankings
     if monthly_rankings:
@@ -88,7 +84,7 @@ async def run_monthly_reset():
 
     # Reset check-ins for the current month
     for user_id in checkin_data:
-        if isinstance(checkin_data[user_id], dict) and checkin_data[user_id].get("month"):
+        if isinstance(checkin_data[user_id], dict) and "month" in checkin_data[user_id]:
             checkin_data[user_id]["checkins"] = 0
             checkin_data[user_id]["month"] = current_month
             checkin_data[user_id]["last_checkin"] = ""
@@ -200,10 +196,10 @@ async def prev_rankings(ctx):
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
     if "monthly_history" in checkin_data and previous_month in checkin_data["monthly_history"]:
-        # Sort users by number of check-ins in descending order
+        # Sort users by number of check-ins (integer), not as dictionaries
         rankings = sorted(
             checkin_data["monthly_history"][previous_month].items(),
-            key=lambda x: x[1]["checkins"],  # Assuming check-ins are stored in a dict with nickname
+            key=lambda x: x[1],  # Sort by the check-in count (x[1] is an integer)
             reverse=True
         )
 
@@ -212,8 +208,8 @@ async def prev_rankings(ctx):
 
         if top_rankings:
             leaderboard = "\n".join(
-                [f"**{index + 1}.** <@{user_id}>: {data['checkins']} check-ins (Nickname: {data['nickname']})"
-                 for index, (user_id, data) in enumerate(top_rankings)]
+                [f"**{index + 1}.** <@{user_id}>: {checkins} check-ins"
+                 for index, (user_id, checkins) in enumerate(top_rankings)]
             )
             await ctx.send(f"**Previous Month's Check-In Leaderboard ({previous_month})**\n{leaderboard}")
         else:
@@ -226,9 +222,9 @@ async def rankings(ctx):
     print_with_timestamp("Rankings function is working...")
     current_month = get_current_month()
 
-    # Sort users by number of check-ins in the current month, ensuring the 'month' key exists
+    # Sort users by number of check-ins in the current month, ensuring the 'month' key exists and check-ins are greater than 0
     rankings = sorted(
-        [(user_id, data["checkins"], data["nickname"]) for user_id, data in checkin_data.items() if data.get("month") == current_month],
+        [(user_id, data["checkins"], data["nickname"]) for user_id, data in checkin_data.items() if data.get("month") == current_month and data["checkins"] > 0],
         key=lambda x: x[1],  # Sort by check-ins
         reverse=True
     )
