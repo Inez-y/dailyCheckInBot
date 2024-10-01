@@ -204,11 +204,11 @@ async def prev_rankings(ctx):
         )
 
         # Limit the leaderboard to the top 10 users
-        top_rankings = rankings[:10]  # Slice the top 10
+        top_rankings = rankings[:10] 
 
         if top_rankings:
             leaderboard = "\n".join(
-                [f"**{index + 1}.** <@{user_id}>: {checkins} check-ins"
+                [f"**{index + 1}.** {checkin_data[user_id]['nickname']}: {checkins} check-ins"
                  for index, (user_id, checkins) in enumerate(top_rankings)]
             )
             await ctx.send(f"**Previous Month's Check-In Leaderboard ({previous_month})**\n{leaderboard}")
