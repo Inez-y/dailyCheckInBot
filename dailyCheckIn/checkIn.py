@@ -41,7 +41,7 @@ async def on_ready():
         print("Monthly reset function start")
         monthly_reset.start()
 
-@tasks.loop(hours=3)
+@tasks.loop(hours=1)
 async def daily_reset():
     print("Daily reset function is working now...")
     now = datetime.datetime.now()
@@ -61,8 +61,8 @@ async def daily_reset():
     save_checkin_data()
     print(f"Daily check-ins have been reset at {now}.")
 
-# This will run every 3 hours, but we will adjust it to reset only on the 1st of the month
-@tasks.loop(hours=3) 
+# This will run every 1 hours, but we will adjust it to reset only on the 1st of the month
+@tasks.loop(hours=1) 
 async def monthly_reset():
     print("Monthly reset function is working now...")
     now = datetime.datetime.now()
@@ -96,6 +96,11 @@ async def monthly_reset():
         print("Saving data...")
         save_checkin_data()
         print(f"Monthly check-ins have been reset for the new month: {current_month}")
+
+@bot.command(name='trigger_monthly_reset_manually_by_admin')
+async def trigger_monthly_reset(ctx):
+    await monthly_reset() 
+    await ctx.send("Monthly reset triggered manually!")
 
 @bot.command(name='checkin')
 async def checkin(ctx):
