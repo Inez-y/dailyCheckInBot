@@ -75,7 +75,12 @@ async def run_monthly_reset():
     if "monthly_history" not in checkin_data:
         checkin_data["monthly_history"] = {}
 
-    monthly_rankings = {user_id: user_data["checkins"] for user_id, user_data in checkin_data.items() if user_data["month"] == previous_month}
+    # Use .get("month") to avoid KeyError if the 'month' key is missing
+    monthly_rankings = {
+        user_id: user_data["checkins"]
+        for user_id, user_data in checkin_data.items()
+        if user_data.get("month") == previous_month
+    }
 
     # Only save non-empty rankings
     if monthly_rankings:
@@ -83,7 +88,7 @@ async def run_monthly_reset():
 
     # Reset check-ins for the current month
     for user_id in checkin_data:
-        if isinstance(checkin_data[user_id], dict) and "month" in checkin_data[user_id]:
+        if isinstance(checkin_data[user_id], dict) and checkin_data[user_id].get("month"):
             checkin_data[user_id]["checkins"] = 0
             checkin_data[user_id]["month"] = current_month
             checkin_data[user_id]["last_checkin"] = ""
