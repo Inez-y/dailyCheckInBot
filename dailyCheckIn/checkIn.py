@@ -184,14 +184,13 @@ async def print_winners(ctx):
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
     if "monthly_history" in checkin_data and previous_month in checkin_data["monthly_history"]:
-        # Sort users by number of check-ins
         rankings = sorted(
             checkin_data["monthly_history"][previous_month].items(),
             key=lambda x: x[1],
             reverse=True
         )
 
-        # Filter out users with the "Admin" role and get their member objects
+        # Filter out users with the Admin role and get their member objects
         filtered_rankings = []
         for user_id, checkins in rankings:
             member = ctx.guild.get_member(int(user_id))
@@ -202,24 +201,30 @@ async def print_winners(ctx):
         top_rankings = []
         current_rank = 1
         last_checkins = None
-        for i, (user_id, checkins, nickname) in enumerate(filtered_rankings):
-            if last_checkins is None or checkins != last_checkins:
-                current_rank = i + 1
-            if current_rank > 3:
-                break  # Stop after the top 3 unique places
+        places_collected = 0
 
-            top_rankings.append((current_rank, user_id, checkins, nickname))
-            last_checkins = checkins
+        for i, (user_id, checkins, nickname) in enumerate(filtered_rankings):
+            # Assign rank based on check-in count
+            if last_checkins is None or checkins != last_checkins:
+                current_rank = places_collected + 1
+
+            # Collect users for each of the top 3 ranks and their ties
+            if current_rank <= 3:
+                top_rankings.append((current_rank, user_id, checkins, nickname))
+                last_checkins = checkins
+                places_collected += 1 if current_rank > places_collected else 0
+            else:
+                if current_rank > 3 and last_checkins != checkins:
+                    break
 
         if top_rankings:
-            # Generate the leaderboard message
             leaderboard = "\n".join(
                 [
                     f"{'🥇' if rank == 1 else '🥈' if rank == 2 else '🥉' if rank == 3 else f'{rank}.'} {nickname}: {checkins} check-ins"
                     for rank, user_id, checkins, nickname in top_rankings
                 ]
             )
-            await ctx.send(f"## Previous Month's Top 3 Check-In Winners (excluding Admins) ({previous_month})\n{leaderboard}")
+            await ctx.send(f"## Previous Month's Top 3 Check-In Winners (excluding Admins)\n ##({previous_month})\n{leaderboard}")
         else:
             await ctx.send(f"No eligible winners for {previous_month}!")
     else:
