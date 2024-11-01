@@ -4,6 +4,7 @@ import datetime
 import json
 from dotenv import load_dotenv
 import os
+import pytz
 
 # -----------------------------------
 #          Initialize Bot           
@@ -36,7 +37,15 @@ def save_checkin_data():
 
 # Helper function to state timestamp for print lines
 def print_with_timestamp(message):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Define the time zones
+    server_timezone = pytz.timezone('US/Eastern')  
+    local_timezone = pytz.timezone('US/Pacific') 
+
+    # Get the current time in the server's time zone and convert it to the local time zone
+    server_time = datetime.datetime.now(server_timezone)
+    local_time = server_time.astimezone(local_timezone)
+
+    timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}")
     
 # Helper function to get the current month
@@ -152,17 +161,17 @@ async def prev_rankings(ctx):
             reverse=True
         )
 
+        # Limit to the top 10 users
         top_rankings = rankings[:min(10, len(rankings))]
 
         if top_rankings:
             leaderboard = "\n".join(
                 [
-                    f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else ''} f'{index + 1}. ' {nickname}: {checkins} check-ins"
-                    for index, (user_id, checkins, nickname) in enumerate(top_rankings)
+                    f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {checkin_data[user_id]['nickname']}: {checkins} check-ins"
+                    for index, (user_id, checkins) in enumerate(top_rankings)
                 ]
             )
             await ctx.send(f"## Previous Month's Check-In Leaderboard ({previous_month})\n{leaderboard}")
-            return top_rankings
         else:
             await ctx.send(f"No check-ins for {previous_month}!")
     else:
@@ -182,28 +191,40 @@ async def print_winners(ctx):
             reverse=True
         )
 
-        # Filter with admin role
-        top_rankings = []
+        # Filter out users with the "Admin" role and get their member objects
+        filtered_rankings = []
         for user_id, checkins in rankings:
             member = ctx.guild.get_member(int(user_id))
             if member and not any(role.name == "Admin" for role in member.roles):
-                top_rankings.append((user_id, checkins, checkin_data[user_id]['nickname']))
-            
-            if len(top_rankings) >= 3:
-                break
+                filtered_rankings.append((user_id, checkins, checkin_data[user_id]['nickname']))
+
+        # Build the final top ranking with proper rank placement for ties
+        top_rankings = []
+        current_rank = 1
+        last_checkins = None
+        for i, (user_id, checkins, nickname) in enumerate(filtered_rankings):
+            if last_checkins is None or checkins != last_checkins:
+                current_rank = i + 1
+            if current_rank > 3:
+                break  # Stop after the top 3 unique places
+
+            top_rankings.append((current_rank, user_id, checkins, nickname))
+            last_checkins = checkins
 
         if top_rankings:
+            # Generate the leaderboard message
             leaderboard = "\n".join(
                 [
-                    f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {nickname}: {checkins} check-ins"
-                    for index, (user_id, checkins, nickname) in enumerate(top_rankings)
+                    f"{'🥇' if rank == 1 else '🥈' if rank == 2 else '🥉' if rank == 3 else f'{rank}.'} {nickname}: {checkins} check-ins"
+                    for rank, user_id, checkins, nickname in top_rankings
                 ]
             )
-            await ctx.send(f"# Previous Month's Top 3 Check-In Winners (excluding Admins) ({previous_month})\n{leaderboard}")
+            await ctx.send(f"## Previous Month's Top 3 Check-In Winners (excluding Admins) ({previous_month})\n{leaderboard}")
         else:
             await ctx.send(f"No eligible winners for {previous_month}!")
     else:
         await ctx.send(f"No data available for {previous_month}!")
+
 
 @bot.command(name='ranking')
 async def rankings(ctx):
