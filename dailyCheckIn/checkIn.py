@@ -224,12 +224,11 @@ async def print_winners(ctx):
                     for rank, user_id, checkins, nickname in top_rankings
                 ]
             )
-            await ctx.send(f"## Previous Month's Top 3 Check-In Winners (excluding Admins)\n ##({previous_month})\n{leaderboard}")
+            await ctx.send(f"## Previous Month({previous_month})'s Top 3 Check-In Winners (excluding Admins)\n{leaderboard}")
         else:
             await ctx.send(f"No eligible winners for {previous_month}!")
     else:
         await ctx.send(f"No data available for {previous_month}!")
-
 
 @bot.command(name='ranking')
 async def rankings(ctx):
