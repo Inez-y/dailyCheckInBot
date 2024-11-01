@@ -158,7 +158,7 @@ async def prev_rankings(ctx):
         if top_rankings:
             leaderboard = "\n".join(
                 [
-                    f"{index + 1}. {'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else ''} {checkin_data[user_id]['nickname']}: {checkins} check-ins"
+                    f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {checkin_data[user_id]['nickname']}: {checkins} check-ins"
                     for index, (user_id, checkins) in enumerate(top_rankings)
                 ]
             )
@@ -189,7 +189,7 @@ async def rankings(ctx):
     if top_rankings:
         leaderboard = "\n".join(
             [
-                f"{index + 1}. {'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else ''} {nickname}: {checkins} check-ins"
+                f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {nickname}: {checkins} check-ins"
                 for index, (user_id, checkins, nickname) in enumerate(top_rankings)
             ]
         )
