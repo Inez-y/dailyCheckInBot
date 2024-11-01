@@ -1,5 +1,5 @@
 import discord
-from discord.ext import tasks, commands
+from discord.ext import tasks, commands, app_commands
 import datetime
 import json
 from dotenv import load_dotenv
@@ -9,8 +9,10 @@ import os
 #          Initialize Bot           
 # -----------------------------------
 intents = discord.Intents.default()
+client = discord.Client(intents=intents)
 intents.message_content = True  
 intents.members = True    
+tree = app_commands.CommandTree(client)
 
 load_dotenv()  # for ubuntu aws
 TOKEN = os.getenv('DISCORD_TOKEN')
