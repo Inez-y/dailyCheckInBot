@@ -1,5 +1,5 @@
 import discord
-from discord.ext import tasks, commands, app_commands
+from discord.ext import tasks, commands
 import datetime
 import json
 from dotenv import load_dotenv
@@ -9,10 +9,8 @@ import os
 #          Initialize Bot           
 # -----------------------------------
 intents = discord.Intents.default()
-client = discord.Client(intents=intents)
 intents.message_content = True  
 intents.members = True    
-tree = app_commands.CommandTree(client)
 
 load_dotenv()  # for ubuntu aws
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -47,10 +45,9 @@ def get_current_month():
 
 @bot.event
 async def on_ready():
-    await bot.tree.sync() # for command recommandation
     print_with_timestamp(f'{bot.user.name} has connected to Discord!')
     if not monthly_reset.is_running():
-        print_with_timestamp("Monthly reset function start")
+        print_with_timestamp("Monthly reset function starting")
         monthly_reset.start()
 
 # -----------------------------------
@@ -66,12 +63,9 @@ async def trigger_monthly_reset(ctx):
 @tasks.loop(time=datetime.time(hour=0, minute=0))  
 async def monthly_reset():
     print_with_timestamp("Checking for monthly reset...")
-
     now = datetime.datetime.now()
-    
     if now.day == 1 and now.hour == 0:
         await run_monthly_reset() 
-
 
 async def run_monthly_reset():
     current_month = get_current_month()
@@ -100,14 +94,14 @@ async def run_monthly_reset():
 # -----------------------------------
 #           Check In            
 # -----------------------------------
-@bot.tree.command(name='checkin', description="Trigger daily check in")
+@bot.command(name='checkin')
 async def checkin(ctx):
     user_id = str(ctx.author.id)
     nickname = ctx.author.display_name  
     current_time = datetime.datetime.now()
     current_month = get_current_month()
 
-    # Initialize user data if not present, ensuring 'month' is included
+    # Initialize user data if not present
     if user_id not in checkin_data:
         print_with_timestamp("New user!")
         checkin_data[user_id] = {
@@ -119,7 +113,7 @@ async def checkin(ctx):
 
     # Reset check-ins for a new month
     if checkin_data[user_id].get("month") != current_month:
-        print_with_timestamp("New month check in data")
+        print_with_timestamp("New month check-in data")
         checkin_data[user_id] = {
             "nickname": nickname,
             "checkins": 0,
@@ -133,11 +127,11 @@ async def checkin(ctx):
         return
 
     # Update check-in data
-    print_with_timestamp(f"Update daily checkin data for {nickname}")
+    print_with_timestamp(f"Updating daily check-in data for {nickname}")
     checkin_data[user_id]["checkins"] += 1
     checkin_data[user_id]["last_checkin"] = current_time.strftime("%Y-%m-%d")
     checkin_data[user_id]["nickname"] = nickname  # Update nickname if changed
-    print_with_timestamp(f"Saving daily checkin data for {nickname}.")
+    print_with_timestamp(f"Saving daily check-in data for {nickname}.")
     save_checkin_data()
 
     await ctx.send(f'{ctx.author.mention}, you have successfully checked in for today! Total check-ins this month: {checkin_data[user_id]["checkins"]}')
@@ -145,21 +139,21 @@ async def checkin(ctx):
 # -----------------------------------
 #           Rankings           
 # -----------------------------------
-@bot.tree.command(name='prev_ranking', description="Display previous month's ranking")
+@bot.command(name='prev_ranking')
 async def prev_rankings(ctx):
-    print_with_timestamp("prev_rankings function is called")
+    print_with_timestamp("Previous rankings function is called")
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
     if "monthly_history" in checkin_data and previous_month in checkin_data["monthly_history"]:
-        # Sort users by number of check-ins (integer), not as dictionaries
+        # Sort users by number of check-ins
         rankings = sorted(
             checkin_data["monthly_history"][previous_month].items(),
-            key=lambda x: x[1],  # Sort by the check-in count (x[1] is an integer)
+            key=lambda x: x[1],
             reverse=True
         )
 
         # Limit the leaderboard to the top 10 users
-        top_rankings = rankings[:10] 
+        top_rankings = rankings[:10]
 
         if top_rankings:
             leaderboard = "\n".join(
@@ -174,18 +168,18 @@ async def prev_rankings(ctx):
     else:
         await ctx.send(f"No data available for {previous_month}!")
 
-@bot.tree.command(name='ranking', description="Display current month's ranking")
+@bot.command(name='ranking')
 async def rankings(ctx):
-    print_with_timestamp("Current Rankings function is called")
+    print_with_timestamp("Current rankings function is called")
     current_month = get_current_month()
 
-    # Sort users by number of check-ins in the current month, ensuring the 'month' key exists and check-ins are greater than 0
+    # Sort users by number of check-ins in the current month
     rankings = sorted(
         [
             (user_id, data["checkins"], data["nickname"]) for user_id, data in checkin_data.items()
             if data.get("month") == current_month and data["checkins"] > 0
         ],
-        key=lambda x: x[1],  # Sort by check-ins
+        key=lambda x: x[1],
         reverse=True
     )
 
@@ -194,12 +188,12 @@ async def rankings(ctx):
 
     if top_rankings:
         leaderboard = "\n".join(
-                [
-                    f"{index + 1}. {'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else ''} {nickname}: {checkins} check-ins"
-                    for index, (user_id, checkins, nickname) in enumerate(top_rankings)
-                ]
-            )
-        await ctx.send(f"## Current Month's Check-In Leaderboard ({current_month}) \n{leaderboard}")
+            [
+                f"{index + 1}. {'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else ''} {nickname}: {checkins} check-ins"
+                for index, (user_id, checkins, nickname) in enumerate(top_rankings)
+            ]
+        )
+        await ctx.send(f"## Current Month's Check-In Leaderboard ({current_month})\n{leaderboard}")
     else:
         await ctx.send(f"No check-ins for this month yet!")
 
