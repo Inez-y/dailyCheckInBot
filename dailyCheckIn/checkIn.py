@@ -152,19 +152,56 @@ async def prev_rankings(ctx):
             reverse=True
         )
 
-        # Limit the leaderboard to the top 10 users
-        top_rankings = rankings[:10]
+        top_rankings = rankings[:min(10, len(rankings))]
 
         if top_rankings:
             leaderboard = "\n".join(
                 [
-                    f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {checkin_data[user_id]['nickname']}: {checkins} check-ins"
-                    for index, (user_id, checkins) in enumerate(top_rankings)
+                    f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {nickname}: {checkins} check-ins"
+                    for index, (user_id, checkins, nickname) in enumerate(top_rankings)
                 ]
             )
             await ctx.send(f"## Previous Month's Check-In Leaderboard ({previous_month})\n{leaderboard}")
+            return top_rankings
         else:
             await ctx.send(f"No check-ins for {previous_month}!")
+    else:
+        await ctx.send(f"No data available for {previous_month}!")
+
+
+@bot.command(name='winners')
+async def print_winners(ctx):
+    print_with_timestamp("Print winners function is called")
+    previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
+
+    if "monthly_history" in checkin_data and previous_month in checkin_data["monthly_history"]:
+        # Sort users by number of check-ins
+        rankings = sorted(
+            checkin_data["monthly_history"][previous_month].items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        # Filter with admin role
+        top_rankings = []
+        for user_id, checkins in rankings:
+            member = ctx.guild.get_member(int(user_id))
+            if member and not any(role.name == "Admin" for role in member.roles):
+                top_rankings.append((user_id, checkins, checkin_data[user_id]['nickname']))
+            
+            if len(top_rankings) >= 3:
+                break
+
+        if top_rankings:
+            leaderboard = "\n".join(
+                [
+                    f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉'} {nickname}: {checkins} check-ins"
+                    for index, (user_id, checkins, nickname) in enumerate(top_rankings)
+                ]
+            )
+            await ctx.send(f"# Previous Month's Top 3 Check-In Winners (excluding Admins) ({previous_month})\n{leaderboard}")
+        else:
+            await ctx.send(f"No eligible winners for {previous_month}!")
     else:
         await ctx.send(f"No data available for {previous_month}!")
 
