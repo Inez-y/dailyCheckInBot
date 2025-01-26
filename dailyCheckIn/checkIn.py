@@ -5,58 +5,53 @@ import json
 from dotenv import load_dotenv
 import os
 import pytz
+from threading import Lock
 
 # -----------------------------------
-#          Initialize Bot           
+#          Initialize Bot
 # -----------------------------------
 load_dotenv() 
 TOKEN = os.getenv('DISCORD_TOKEN')
-load_dotenv() 
-TOKEN = os.getenv('DISCORD_TOKEN')
+
 intents = discord.Intents.default()
 intents.message_content = True  
 intents.members = True    
 bot = commands.Bot(command_prefix='/', intents=intents)
 
+data_lock = Lock()  # Lock to prevent concurrency issues
+
 # Load check-in data
 try:
     with open('checkins.json', 'r') as file:
-        print("Check in data file opened")
+        print("Check-in data file opened.")
         checkin_data = json.load(file)
-        print("Loaded check-in data:", checkin_data) 
-        print("Loaded check-in data:", checkin_data) 
+        print("Loaded check-in data:", checkin_data)
 except FileNotFoundError:
-    print("Check in data file not found")
+    print("Check-in data file not found. Initializing empty data.")
     checkin_data = {}
 except json.JSONDecodeError:
     print("Error decoding JSON. Check the file format.")
     checkin_data = {}
-
-except json.JSONDecodeError:
-    print("Error decoding JSON. Check the file format.")
-    checkin_data = {}
-
 
 # Save data as json
 def save_checkin_data():
     try:
-        with open('checkins.json', 'w') as file:
-            json.dump(checkin_data, file)
-        print_with_timestamp("Data saved successfully.")
+        with data_lock:
+            with open('checkins.json', 'w') as file:
+                json.dump(checkin_data, file, indent=4)
+            print_with_timestamp("Data saved successfully.")
     except Exception as e:
         print_with_timestamp(f"Error saving data: {e}")
 
-    # Load check-in data
-    try:
-        with open('checkins.json', 'r') as file:
-            checkin_data = json.load(file)
-    except FileNotFoundError:
-        checkin_data = {}
-    except json.JSONDecodeError:
-        checkin_data = {}
+# Ensure guild data exists
+def ensure_guild_data(guild_id):
+    if guild_id not in checkin_data:
+        checkin_data[guild_id] = {
+            "current-month": {},
+            "monthly_history": {}
+        }
 
-
-# Helper function to state timestamp for print lines
+# Helper function to add timestamp to print statements
 def print_with_timestamp(message):
     server_timezone = pytz.timezone('US/Eastern')  
     local_timezone = pytz.timezone('US/Pacific') 
@@ -64,7 +59,6 @@ def print_with_timestamp(message):
     local_time = server_time.astimezone(local_timezone)
     timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}")
-
 
 # Helper function to get the current month
 def get_current_month():
@@ -75,19 +69,17 @@ async def on_ready():
     print_with_timestamp(f'{bot.user.name} has connected to Discord!')
     print("Registered Commands:", [command.name for command in bot.tree.get_commands()])
     
-    print("Registered Commands:", [command.name for command in bot.tree.get_commands()])
-    
     if not monthly_reset.is_running():
-        print_with_timestamp("Monthly reset function starting")
+        print_with_timestamp("Monthly reset function starting.")
         monthly_reset.start()
 
 # -----------------------------------
-#           Monthly Reset            
+#           Monthly Reset
 # -----------------------------------
 @bot.command(name='admin_monthly_reset_trigger_manually')
 @commands.has_role('Admin')
 async def trigger_monthly_reset(ctx):
-    await run_monthly_reset()  
+    await run_monthly_reset()
     await ctx.send("Monthly reset triggered manually!")
 
 # Auto trigger
@@ -96,38 +88,34 @@ async def monthly_reset():
     print_with_timestamp("Checking for monthly reset...")
     now = datetime.datetime.now()
     if now.day == 1 and now.hour == 0:
-        await run_monthly_reset() 
+        await run_monthly_reset()
 
 async def run_monthly_reset():
     current_month = get_current_month()
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
-    for guild_id in checkin_data:
-        # Ensure the guild has the necessary structure
-        guild_data = checkin_data[guild_id]
-        if "current-month" not in guild_data:
-            guild_data["current-month"] = {}
-        if "monthly_history" not in guild_data:
-            guild_data["monthly_history"] = {}
+    with data_lock:
+        for guild_id in checkin_data:
+            ensure_guild_data(guild_id)
+            guild_data = checkin_data[guild_id]
 
-        # Move current month's data to monthly history
-        if previous_month in guild_data["current-month"]:
-            guild_data["monthly_history"][previous_month] = {
-                user_id: data["checkins"]
-                for user_id, data in guild_data["current-month"][previous_month].items()
-            }
+            # Move current month's data to monthly history
+            if previous_month in guild_data["current-month"]:
+                guild_data["monthly_history"][previous_month] = {
+                    user_id: data["checkins"]
+                    for user_id, data in guild_data["current-month"][previous_month].items()
+                }
 
-        # Reset current-month data for the new month
-        guild_data["current-month"] = {current_month: {}}
+            # Reset current-month data for the new month
+            guild_data["current-month"] = {current_month: {}}
 
     save_checkin_data()
     print_with_timestamp(f"Monthly check-ins have been reset for all servers for the new month: {current_month}")
 
-
 # -----------------------------------
-#           Check In            
+#           Check In
 # -----------------------------------
-@bot.tree.command(name='checkin')
+@bot.tree.command(name='checkin', description="Check in for the day.")
 async def checkin(interaction: discord.Interaction):
     guild_id = str(interaction.guild.id)
     user_id = str(interaction.user.id)
@@ -135,37 +123,35 @@ async def checkin(interaction: discord.Interaction):
     current_time = datetime.datetime.now()
     current_month = get_current_month()
 
-    # Initialize guild data if it doesn't exist
-    if guild_id not in checkin_data:
-        checkin_data[guild_id] = {
-            "current-month": {},
-            "monthly_history": {}
-        }
+    ensure_guild_data(guild_id)
 
-    # Initialize current month data if it doesn't exist
-    if current_month not in checkin_data[guild_id]["current-month"]:
-        checkin_data[guild_id]["current-month"][current_month] = {}
+    with data_lock:
+        guild_data = checkin_data[guild_id]
 
-    # Initialize user data if it doesn't exist
-    if user_id not in checkin_data[guild_id]["current-month"][current_month]:
-        checkin_data[guild_id]["current-month"][current_month][user_id] = {
-            "nickname": nickname,
-            "checkins": 0,
-            "last_checkin": ""
-        }
+        # Initialize current month data if it doesn't exist
+        if current_month not in guild_data["current-month"]:
+            guild_data["current-month"][current_month] = {}
 
-    # Get user data
-    user_data = checkin_data[guild_id]["current-month"][current_month][user_id]
+        # Initialize user data if it doesn't exist
+        if user_id not in guild_data["current-month"][current_month]:
+            guild_data["current-month"][current_month][user_id] = {
+                "nickname": nickname,
+                "checkins": 0,
+                "last_checkin": ""
+            }
 
-    # Check if the user has already checked in today
-    if user_data["last_checkin"] == current_time.strftime("%Y-%m-%d"):
-        await interaction.response.send_message(f'{interaction.user.mention}, you have already checked in today!')
-        return
+        # Get user data
+        user_data = guild_data["current-month"][current_month][user_id]
 
-    # Update user check-in data
-    user_data["checkins"] += 1
-    user_data["last_checkin"] = current_time.strftime("%Y-%m-%d")
-    user_data["nickname"] = nickname
+        # Check if the user has already checked in today
+        if user_data["last_checkin"] == current_time.strftime("%Y-%m-%d"):
+            await interaction.response.send_message(f'{interaction.user.mention}, you have already checked in today!')
+            return
+
+        # Update user check-in data
+        user_data["checkins"] += 1
+        user_data["last_checkin"] = current_time.strftime("%Y-%m-%d")
+        user_data["nickname"] = nickname
 
     save_checkin_data()
 
@@ -175,115 +161,24 @@ async def checkin(interaction: discord.Interaction):
     )
 
 # -----------------------------------
-#           Rankings           
+#           Rankings
 # -----------------------------------
-@bot.tree.command(name='prev_ranking')
-async def prev_rankings(interaction: discord.Interaction):
-@bot.tree.command(name='prev_ranking')
-async def prev_rankings(interaction: discord.Interaction):
-    print_with_timestamp("Previous rankings function is called")
-    guild_id = str(interaction.guild.id)
-    previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
-    current_month = get_current_month()
-
-    if guild_id not in checkin_data or "current-month" not in checkin_data[guild_id] or current_month not in checkin_data[guild_id]["current-month"]:
-        
-        await interaction.respongithse.send_message(f"No check-ins for this server yet!")
-        return
-    elif guild_id in checkin_data and "monthly_history" in checkin_data and previous_month in checkin_data["monthly_history"]:
-        await interaction.response.send_message(f"No data available for {previous_month}!")
-        return
-
-    # Get rankings for the current month
-    rankings = sorted(
-        [
-            (user_id, data["checkins"], data["nickname"])
-            for user_id, data in checkin_data[guild_id]["current-month"][current_month].items()
-        ],
-        key=lambda x: x[1],
-        reverse=True
-    )
-
-    top_rankings = rankings[:min(10, len(rankings))]
-
-    if top_rankings:
-        leaderboard = "\n".join(
-            [
-                f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {checkin_data[user_id]['nickname']}: {checkins} check-ins"
-                for index, (user_id, checkins) in enumerate(top_rankings)
-            ]
-        )
-        await interaction.response.send_message(f"## Previous Month's Check-In Leaderboard ({previous_month})\n{leaderboard}")
-    else:
-        await interaction.response.send_message(f"No check-ins for {previous_month}!")
-    
-
-@bot.tree.command(name='winners')
-async def print_winners(interaction: discord.Interaction):
-    print_with_timestamp("Print winners function is called")
-    previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
-
-    if "monthly_history" in checkin_data and previous_month in checkin_data["monthly_history"]:
-        rankings = sorted(
-            checkin_data["monthly_history"][previous_month].items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-
-        filtered_rankings = []
-        for user_id, checkins in rankings:
-            member = interaction.guild.get_member(int(user_id))
-            member = interaction.guild.get_member(int(user_id))
-            if member and not any(role.name == "Admin" for role in member.roles):
-                filtered_rankings.append((user_id, checkins, checkin_data[user_id]['nickname']))
-
-        top_rankings = []
-        current_rank = 1
-        last_checkins = None
-        places_collected = 0
-
-        for i, (user_id, checkins, nickname) in enumerate(filtered_rankings):
-            if last_checkins is None or checkins != last_checkins:
-                current_rank = places_collected + 1
-
-            if current_rank <= 3:
-                top_rankings.append((current_rank, user_id, checkins, nickname))
-                last_checkins = checkins
-                places_collected += 1 if current_rank > places_collected else 0
-            else:
-                if current_rank > 3 and last_checkins != checkins:
-                    break
-
-        if top_rankings:
-            leaderboard = "\n".join(
-                [
-                    f"{'🥇' if rank == 1 else '🥈' if rank == 2 else '🥉' if rank == 3 else f'{rank}.'} {nickname}: {checkins} check-ins"
-                    for rank, user_id, checkins, nickname in top_rankings
-                ]
-            )
-            await interaction.response.send_message(f"## Previous Month({previous_month})'s Top 3 Check-In Winners (excluding Admins)\n{leaderboard}")
-            await interaction.response.send_message(f"## Previous Month({previous_month})'s Top 3 Check-In Winners (excluding Admins)\n{leaderboard}")
-        else:
-            await interaction.response.send_message(f"No eligible winners for {previous_month}!")
-            await interaction.response.send_message(f"No eligible winners for {previous_month}!")
-    else:
-        await interaction.response.send_message(f"No data available for {previous_month}!")
-        await interaction.response.send_message(f"No data available for {previous_month}!")
-
-@bot.tree.command(name='ranking')
+@bot.tree.command(name='ranking', description="View the current month's leaderboard.")
 async def rankings(interaction: discord.Interaction):
-    guild_id = str(interaction.guild.id)  # Get server ID
+    guild_id = str(interaction.guild.id)
     current_month = get_current_month()
-
-    if guild_id not in checkin_data or not checkin_data[guild_id]:
+    if guild_id not in checkin_data:
+    # if guild_id not in checkin_data or "current-month" not in checkin_data[guild_id] or current_month not in checkin_data[guild_id]["current-month"]:
         await interaction.response.send_message(f"No check-ins for this server yet!")
         return
 
-    # Sort rankings for the current guild
+    guild_data = checkin_data[guild_id]
+    current_data = guild_data["current-month"][current_month]
+
     rankings = sorted(
         [
-            (user_id, data["checkins"], data["nickname"]) for user_id, data in checkin_data[guild_id].items()
-            if data.get("month") == current_month and data["checkins"] > 0
+            (user_id, data["checkins"], data["nickname"]) 
+            for user_id, data in current_data.items()
         ],
         key=lambda x: x[1],
         reverse=True
@@ -297,22 +192,141 @@ async def rankings(interaction: discord.Interaction):
             ]
         )
         await interaction.response.send_message(f"## Current Month's Check-In Leaderboard ({current_month})\n{leaderboard}")
-        await interaction.response.send_message(f"## Current Month's Check-In Leaderboard ({current_month})\n{leaderboard}")
     else:
         await interaction.response.send_message(f"No check-ins for this month yet!")
 
+@bot.tree.command(name='winners')
+async def print_winners(interaction: discord.Interaction):
+    print_with_timestamp("Print winners function is called")
+    guild_id = str(interaction.guild.id)
+    previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
+
+    # Ensure the guild and monthly history exist
+    if guild_id not in checkin_data or "monthly_history" not in checkin_data[guild_id]:
+        await interaction.response.send_message(f"No data available for {previous_month}!")
+        return
+
+    guild_data = checkin_data[guild_id]
+
+    # Check if the previous month exists in monthly history
+    if previous_month not in guild_data["monthly_history"]:
+        await interaction.response.send_message(f"No check-ins for {previous_month}!")
+        return
+
+    previous_data = guild_data["monthly_history"][previous_month]
+
+    # Now get the user's nickname from current month's data (fallback)
+    current_month = get_current_month()
+    current_data = guild_data["current-month"].get(current_month, {})
+
+    # Get rankings for the previous month (only check-ins)
+    rankings = sorted(
+        [
+            (user_id, checkins, current_data.get(user_id, {}).get("nickname", "Unknown"))
+            for user_id, checkins in previous_data.items()
+        ],
+        key=lambda x: x[1],  # Sort by check-ins
+        reverse=True
+    )
+
+    # Group users by their check-ins count
+    grouped_rankings = {}
+    for user_id, checkins, nickname in rankings:
+        # Exclude users with "Admin" role
+        member = interaction.guild.get_member(int(user_id))
+        if member and any(role.name == "Admin" for role in member.roles):
+            continue
+
+        if checkins not in grouped_rankings:
+            grouped_rankings[checkins] = []
+        grouped_rankings[checkins].append((user_id, nickname))
+
+    # Build the top rankings list
+    top_rankings = []
+    current_rank = 1
+    for checkins in sorted(grouped_rankings.keys(), reverse=True):
+        users_with_same_checkins = grouped_rankings[checkins]
+        
+        # Add users with the same check-ins under the same rank
+        user_list = ", ".join([nickname for _, nickname in users_with_same_checkins])
+        top_rankings.append((current_rank, user_list, checkins))
+
+        # Update the rank for the next group of users
+        current_rank += 1
+
+        # Limit to top 3
+        if len(top_rankings) >= 3:
+            break
+
+    # If there are no rankings, handle that case
+    if top_rankings:
+        leaderboard = "\n".join(
+            [
+                f"{'🥇' if rank == 1 else '🥈' if rank == 2 else '🥉' if rank == 3 else f'{rank}.'} {user_list}: {checkins} check-ins"
+                for rank, user_list, checkins in top_rankings
+            ]
+        )
+        await interaction.response.send_message(f"## Check-In Event Winners from ({previous_month})\n{leaderboard}")
+    else:
+        await interaction.response.send_message(f"No check-ins for {previous_month}!")
+
+
+
+
+@bot.tree.command(name='prev_ranking', description="View the previous month's leaderboard.")
+async def prev_rankings(interaction: discord.Interaction):
+    print_with_timestamp("Previous rankings function is called")
+    guild_id = str(interaction.guild.id)
+    previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
+
+    # Ensure the guild and monthly history exist
+    if guild_id not in checkin_data or "monthly_history" not in checkin_data[guild_id]:
+        await interaction.response.send_message(f"No data available for {previous_month}!")
+        return
+
+    guild_data = checkin_data[guild_id]
+
+    # Check if the previous month exists in monthly history
+    if previous_month not in guild_data["monthly_history"]:
+        await interaction.response.send_message(f"No check-ins for {previous_month}!")
+        return
+
+    previous_data = guild_data["monthly_history"][previous_month]
+
+    # Now get the user's nickname from current month's data (fallback)
+    current_month = get_current_month()
+    current_data = guild_data["current-month"].get(current_month, {})
+
+    # Get rankings for the previous month (only check-ins)
+    rankings = sorted(
+        [
+            (user_id, checkins, current_data.get(user_id, {}).get("nickname", "Unknown"))
+            for user_id, checkins in previous_data.items()
+        ],
+        key=lambda x: x[1],  # Sort by check-ins
+        reverse=True
+    )
+
+    # Only include the top 10
+    top_rankings = rankings[:min(10, len(rankings))]
+
+    if top_rankings:
+        leaderboard = "\n".join(
+            [
+                f"{'🥇' if index == 0 else '🥈' if index == 1 else '🥉' if index == 2 else f'{index + 1}. '} {nickname}: {checkins} check-ins"
+                for index, (user_id, checkins, nickname) in enumerate(top_rankings)
+            ]
+        )
+        await interaction.response.send_message(f"## Previous Month's Check-In Leaderboard ({previous_month})\n{leaderboard}")
+    else:
+        await interaction.response.send_message(f"No check-ins for {previous_month}!")
 
 @bot.tree.command(name='hello')
 async def prev_rankings(interaction: discord.Interaction):
-    print_with_timestamp("Current rankings function is called")
-    await interaction.response.send_message(f"Hydration is key 💧")
-        await interaction.response.send_message(f"No check-ins for this month yet!")
-
-
-@bot.tree.command(name='hello')
-async def prev_rankings(interaction: discord.Interaction):
-    print_with_timestamp("Current rankings function is called")
+    print_with_timestamp("Hello called")
     await interaction.response.send_message(f"Hydration is key 💧")
 
-# Run the program
+# -----------------------------------
+#           Run Bot
+# -----------------------------------
 bot.run(TOKEN)
