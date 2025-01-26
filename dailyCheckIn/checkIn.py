@@ -11,6 +11,8 @@ import pytz
 # -----------------------------------
 load_dotenv() 
 TOKEN = os.getenv('DISCORD_TOKEN')
+load_dotenv() 
+TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.default()
 intents.message_content = True  
 intents.members = True    
@@ -22,9 +24,14 @@ try:
         print("Check in data file opened")
         checkin_data = json.load(file)
         print("Loaded check-in data:", checkin_data) 
+        print("Loaded check-in data:", checkin_data) 
 except FileNotFoundError:
     print("Check in data file not found")
     checkin_data = {}
+except json.JSONDecodeError:
+    print("Error decoding JSON. Check the file format.")
+    checkin_data = {}
+
 except json.JSONDecodeError:
     print("Error decoding JSON. Check the file format.")
     checkin_data = {}
@@ -58,6 +65,7 @@ def print_with_timestamp(message):
     timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}")
 
+
 # Helper function to get the current month
 def get_current_month():
     return datetime.datetime.now().strftime("%Y-%m")
@@ -65,6 +73,8 @@ def get_current_month():
 @bot.event
 async def on_ready():
     print_with_timestamp(f'{bot.user.name} has connected to Discord!')
+    print("Registered Commands:", [command.name for command in bot.tree.get_commands()])
+    
     print("Registered Commands:", [command.name for command in bot.tree.get_commands()])
     
     if not monthly_reset.is_running():
@@ -169,6 +179,8 @@ async def checkin(interaction: discord.Interaction):
 # -----------------------------------
 @bot.tree.command(name='prev_ranking')
 async def prev_rankings(interaction: discord.Interaction):
+@bot.tree.command(name='prev_ranking')
+async def prev_rankings(interaction: discord.Interaction):
     print_with_timestamp("Previous rankings function is called")
     guild_id = str(interaction.guild.id)
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
@@ -221,6 +233,7 @@ async def print_winners(interaction: discord.Interaction):
         filtered_rankings = []
         for user_id, checkins in rankings:
             member = interaction.guild.get_member(int(user_id))
+            member = interaction.guild.get_member(int(user_id))
             if member and not any(role.name == "Admin" for role in member.roles):
                 filtered_rankings.append((user_id, checkins, checkin_data[user_id]['nickname']))
 
@@ -249,9 +262,12 @@ async def print_winners(interaction: discord.Interaction):
                 ]
             )
             await interaction.response.send_message(f"## Previous Month({previous_month})'s Top 3 Check-In Winners (excluding Admins)\n{leaderboard}")
+            await interaction.response.send_message(f"## Previous Month({previous_month})'s Top 3 Check-In Winners (excluding Admins)\n{leaderboard}")
         else:
             await interaction.response.send_message(f"No eligible winners for {previous_month}!")
+            await interaction.response.send_message(f"No eligible winners for {previous_month}!")
     else:
+        await interaction.response.send_message(f"No data available for {previous_month}!")
         await interaction.response.send_message(f"No data available for {previous_month}!")
 
 @bot.tree.command(name='ranking')
@@ -281,7 +297,15 @@ async def rankings(interaction: discord.Interaction):
             ]
         )
         await interaction.response.send_message(f"## Current Month's Check-In Leaderboard ({current_month})\n{leaderboard}")
+        await interaction.response.send_message(f"## Current Month's Check-In Leaderboard ({current_month})\n{leaderboard}")
     else:
+        await interaction.response.send_message(f"No check-ins for this month yet!")
+
+
+@bot.tree.command(name='hello')
+async def prev_rankings(interaction: discord.Interaction):
+    print_with_timestamp("Current rankings function is called")
+    await interaction.response.send_message(f"Hydration is key 💧")
         await interaction.response.send_message(f"No check-ins for this month yet!")
 
 
