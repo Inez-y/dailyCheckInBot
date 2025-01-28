@@ -160,16 +160,20 @@ async def checkin(interaction: discord.Interaction):
         f'Total check-ins this month: {user_data["checkins"]}'
     )
 
-# -----------------------------------
-#           Rankings
-# -----------------------------------
 @bot.tree.command(name='ranking', description="View the current month's leaderboard.")
 async def rankings(interaction: discord.Interaction):
+    # Defer the response immediately to prevent timeout
+    await interaction.response.defer()
+
     guild_id = str(interaction.guild.id)
     current_month = get_current_month()
+
+    # Ensure check-ins exist for this server
     if guild_id not in checkin_data:
-    # if guild_id not in checkin_data or "current-month" not in checkin_data[guild_id] or current_month not in checkin_data[guild_id]["current-month"]:
-        await interaction.response.send_message(f"No check-ins for this server yet!")
+        await interaction.followup.send(f"No check-ins for this server yet!")
+        return
+    elif current_month not in checkin_data[guild_id]["current-month"]:
+        await interaction.followup.send(f"No check-ins for this month yet!")
         return
 
     guild_data = checkin_data[guild_id]
@@ -191,9 +195,11 @@ async def rankings(interaction: discord.Interaction):
                 for index, (user_id, checkins, nickname) in enumerate(rankings)
             ]
         )
-        await interaction.response.send_message(f"## Current Month's Check-In Leaderboard ({current_month})\n{leaderboard}")
+        await interaction.followup.send(f"## Current Month's Check-In Leaderboard ({current_month})\n{leaderboard}")
     else:
-        await interaction.response.send_message(f"No check-ins for this month yet!")
+        await interaction.followup.send(f"No check-ins for this month yet!")
+
+
 
 @bot.tree.command(name='winners')
 async def print_winners(interaction: discord.Interaction):
