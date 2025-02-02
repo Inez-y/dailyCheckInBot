@@ -99,11 +99,15 @@ async def run_monthly_reset():
             ensure_guild_data(guild_id)
             guild_data = checkin_data[guild_id]
 
-            # Move current month's data to monthly history
-            if previous_month in guild_data["current-month"]:
+            # If the current month has any data, move it to monthly_history
+            if current_month in guild_data["current-month"]:
                 guild_data["monthly_history"][previous_month] = {
-                    user_id: data["checkins"]
-                    for user_id, data in guild_data["current-month"][previous_month].items()
+                    user_id: {
+                        "checkins": data["checkins"],
+                        "nickname": data["nickname"],
+                        "last_checkin": data["last_checkin"]
+                    }
+                    for user_id, data in guild_data["current-month"][current_month].items()
                 }
 
             # Reset current-month data for the new month
@@ -205,6 +209,7 @@ async def rankings(interaction: discord.Interaction):
 async def print_winners(interaction: discord.Interaction):
     print_with_timestamp("Print winners function is called")
     guild_id = str(interaction.guild.id)
+    user_id = str(interaction.user.id)
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
     # Ensure the guild and monthly history exist
@@ -225,15 +230,21 @@ async def print_winners(interaction: discord.Interaction):
     current_month = get_current_month()
     current_data = guild_data["current-month"].get(current_month, {})
 
+    # Try getting the nickname from the current month, fallback to previous month if not found
+    nickname = current_data.get(user_id, {}).get("nickname")
+    if not nickname:  # If the nickname is not in current month, fallback to monthly_history
+        nickname = guild_data["monthly_history"].get(previous_month, {}).get(user_id, {}).get("nickname", "Unknown")
+
     # Get rankings for the previous month (only check-ins)
     rankings = sorted(
-        [
-            (user_id, checkins, current_data.get(user_id, {}).get("nickname", "Unknown"))
-            for user_id, checkins in previous_data.items()
-        ],
-        key=lambda x: x[1],  # Sort by check-ins
-        reverse=True
+    [
+        (user_id, data["checkins"], current_data.get(user_id, {}).get("nickname") or guild_data["monthly_history"].get(previous_month, {}).get(user_id, {}).get("nickname", "Unknown"))
+        for user_id, data in previous_data.items()  # 'data' is now the dictionary from previous_data
+    ],
+    key=lambda x: x[1],  # Sort by check-ins
+    reverse=True
     )
+
 
     # Group users by their check-ins count
     grouped_rankings = {}
@@ -283,6 +294,7 @@ async def print_winners(interaction: discord.Interaction):
 async def prev_rankings(interaction: discord.Interaction):
     print_with_timestamp("Previous rankings function is called")
     guild_id = str(interaction.guild.id)
+    user_id = str(interaction.user.id)
     previous_month = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
     # Ensure the guild and monthly history exist
@@ -303,14 +315,19 @@ async def prev_rankings(interaction: discord.Interaction):
     current_month = get_current_month()
     current_data = guild_data["current-month"].get(current_month, {})
 
+    # Try getting the nickname from the current month, fallback to previous month if not found
+    nickname = current_data.get(user_id, {}).get("nickname")
+    if not nickname:  # If the nickname is not in current month, fallback to monthly_history
+        nickname = guild_data["monthly_history"].get(previous_month, {}).get(user_id, {}).get("nickname", "Unknown")
+
     # Get rankings for the previous month (only check-ins)
     rankings = sorted(
-        [
-            (user_id, checkins, current_data.get(user_id, {}).get("nickname", "Unknown"))
-            for user_id, checkins in previous_data.items()
-        ],
-        key=lambda x: x[1],  # Sort by check-ins
-        reverse=True
+    [
+        (user_id, data["checkins"], current_data.get(user_id, {}).get("nickname") or guild_data["monthly_history"].get(previous_month, {}).get(user_id, {}).get("nickname", "Unknown"))
+        for user_id, data in previous_data.items()  # 'data' is now the dictionary from previous_data
+    ],
+    key=lambda x: x[1],  # Sort by check-ins
+    reverse=True
     )
 
     # Only include the top 10
