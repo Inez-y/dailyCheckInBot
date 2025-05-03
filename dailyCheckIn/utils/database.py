@@ -1,6 +1,6 @@
 import os
 import asyncio
-import aiomysql
+# import aiomysql
 from dotenv import load_dotenv
 from utils.helpers import print_with_timestamp
 
