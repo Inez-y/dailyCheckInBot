@@ -4,7 +4,7 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 from utils.helpers import print_with_timestamp
-from utils.database import auto_backup_loop, setup_database
+from utils.database import init_db_pool, setup_database
 from cogs.scheduler import monthly_top3_announcement
 
 # Load environment variables
@@ -38,11 +38,17 @@ async def load_cogs():
 #         await load_cogs()
 #         await bot.start(TOKEN)
 async def main():
-    setup_database()
+    # setup_database()
+    # async with bot:
+    #     await load_cogs()
+    #     asyncio.create_task(monthly_top3_announcement(bot))  # <-- Add this
+    #     await bot.start(TOKEN)
+    await init_db_pool()
+    await setup_database()
     async with bot:
         await load_cogs()
-        asyncio.create_task(monthly_top3_announcement(bot))  # <-- Add this
         await bot.start(TOKEN)
 
+# Run the program
 if __name__ == "__main__":
     asyncio.run(main())
