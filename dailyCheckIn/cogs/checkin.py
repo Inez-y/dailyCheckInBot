@@ -18,7 +18,7 @@ class CheckIn(commands.Cog):
         current_time = datetime.datetime.now()
         current_date = current_time.strftime("%Y-%m-%d")
 
-        success = add_checkin(guild_id, user_id, nickname, current_date)
+        success = await add_checkin(guild_id, user_id, nickname, current_date)
 
         # Get stats regardless of whether it was a duplicate
         current_month = get_current_month()
