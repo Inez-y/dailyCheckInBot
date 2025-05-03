@@ -1,8 +1,8 @@
 from discord.ext import commands
 from discord import app_commands, Interaction
 import datetime
-from utils.helpers import log_command_usage
-from utils.database import add_checkin
+from utils.helpers import get_current_month, log_command_usage
+from utils.database import add_checkin, count_user_checkins
 
 class CheckIn(commands.Cog):
     def __init__(self, bot):
@@ -20,12 +20,18 @@ class CheckIn(commands.Cog):
 
         success = add_checkin(guild_id, user_id, nickname, current_date)
 
+        # Get stats regardless of whether it was a duplicate
+        current_month = get_current_month()
+        monthly_count, total_count = await count_user_checkins(guild_id, user_id, current_month)
+        
         if not success:
             # To the discord server
             await interaction.response.send_message(f'{interaction.user.mention}, you have already checked in today!', ephemeral=True)
         else:
             # To the discord server
-            await interaction.response.send_message(f'{interaction.user.mention}, check-in successful for today!')
+            await interaction.response.send_message(
+                f'{interaction.user.mention} checked {monthly_count} time(s) this month · 📊 {total_count} time(s) in total'
+            )
             
 async def setup(bot):
     await bot.add_cog(CheckIn(bot))

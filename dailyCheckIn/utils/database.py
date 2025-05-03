@@ -72,6 +72,26 @@ async def add_checkin(guild_id, user_id, nickname, checkin_date):
                 print_with_timestamp(f"❌ DB Insert Failed: {e}")
                 return False
 
+# Monthly and Total Counts
+async def count_user_checkins(guild_id, user_id, month_prefix):
+    async with db_pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            # Monthly count
+            await cursor.execute('''
+                SELECT COUNT(*) FROM checkins
+                WHERE guild_id = %s AND user_id = %s AND checkin_date LIKE %s
+            ''', (guild_id, user_id, f"{month_prefix}%"))
+            monthly = (await cursor.fetchone())[0]
+
+            # Total count
+            await cursor.execute('''
+                SELECT COUNT(*) FROM checkins
+                WHERE guild_id = %s AND user_id = %s
+            ''', (guild_id, user_id))
+            total = (await cursor.fetchone())[0]
+
+    return monthly, total
+
 # Monthly checkin ranking
 async def get_monthly_checkins(guild_id, month_prefix):
     async with db_pool.acquire() as conn:
