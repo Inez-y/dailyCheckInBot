@@ -2,4 +2,12 @@
 checkins.json
 .venv
 checkInBotKey
-key.pem
+
+checkins.db
+*.db
+.env
+__pycache__/
+*.pyc
+*.log
+/backups/
+data/

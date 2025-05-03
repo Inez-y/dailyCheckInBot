@@ -1,8 +1,11 @@
+import asyncio
 import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
 from utils.helpers import print_with_timestamp
+from utils.database import auto_backup_loop, setup_database
+from cogs.scheduler import monthly_top3_announcement
 
 # Load environment variables
 load_dotenv()
@@ -21,17 +24,25 @@ COGS = ["cogs.checkin", "cogs.rankings", "cogs.admin"]
 async def on_ready():
     # Sync the slash commands
     await bot.tree.sync()
-    print_with_timestamp(f'The bot has connected to Discord and slash commands synced!')
+    print_with_timestamp(f'{bot.user.name} is online and slash commands synced!')
 
 async def load_cogs():
     for cog in COGS:
         await bot.load_extension(cog)
 
 # Start the bot
+# async def main():
+#     setup_database()
+#     asyncio.create_task(auto_backup_loop())
+#     async with bot:
+#         await load_cogs()
+#         await bot.start(TOKEN)
 async def main():
+    setup_database()
     async with bot:
         await load_cogs()
+        asyncio.create_task(monthly_top3_announcement(bot))  # <-- Add this
         await bot.start(TOKEN)
 
-import asyncio
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

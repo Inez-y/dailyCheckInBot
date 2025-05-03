@@ -1,15 +1,15 @@
+import datetime
 from discord.ext import commands
 from discord import Interaction, app_commands
-from utils.data_handler import load_checkin_data
 from utils.helpers import get_current_month, log_command_failure
 from utils.helpers import log_command_usage
-
+from utils.database import get_monthly_checkins
 
 class Rankings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.checkin_data = load_checkin_data()
 
+    # Current month's ranking
     @app_commands.command(name='ranking', description="View the current month's leaderboard.")
     async def rankings(self, interaction: Interaction):
         log_command_usage(interaction, "ranking")
@@ -17,44 +17,74 @@ class Rankings(commands.Cog):
         guild_id = str(interaction.guild.id)
         current_month = get_current_month()
 
-        if guild_id not in self.checkin_data or current_month not in self.checkin_data[guild_id]["current-month"]:
+        rows = get_monthly_checkins(guild_id, current_month)
+
+        if not rows:
             await interaction.response.send_message("No check-ins for this month yet!")
             log_command_failure(interaction, "ranking", "No check-ins found for this month.")
             return
 
-        rankings = sorted(
-            [(user_id, data["checkins"], data["nickname"]) for user_id, data in self.checkin_data[guild_id]["current-month"][current_month].items()],
-            key=lambda x: x[1],
-            reverse=True
-        )
-
         leaderboard = "\n".join(
-            [f"{index+1}. {nickname}: {checkins} check-ins" for index, (_, checkins, nickname) in enumerate(rankings)]
+            [f"{index+1}. {row['nickname']}: {row['checkins']} check-ins" for index, row in enumerate(rows)]
         )
 
+        # To the discord server
         await interaction.response.send_message(f"## Current Month's Leaderboard ({current_month})\n{leaderboard}")
 
-    # async def rankings(self, ctx):
-    #     guild_id = str(ctx.guild.id)
-    #     current_month = get_current_month()
-        
-        
+    # Previous month's ranking
+    @app_commands.command(name='prev_rank', description="View the previous month's top 10 leaderboard.")
+    async def prev_rank(self, interaction: Interaction):
+        log_command_usage(interaction, "prev_rank")
 
-    #     if guild_id not in self.checkin_data or current_month not in self.checkin_data[guild_id]["current-month"]:
-    #         await ctx.send("No check-ins for this month yet!")
-    #         return
+        guild_id = str(interaction.guild.id)
 
-    #     rankings = sorted(
-    #         [(user_id, data["checkins"], data["nickname"]) for user_id, data in self.checkin_data[guild_id]["current-month"][current_month].items()],
-    #         key=lambda x: x[1],
-    #         reverse=True
-    #     )
+        # Calculate previous month
+        now = datetime.datetime.now()
+        first_day_of_current_month = now.replace(day=1)
+        last_month_last_day = first_day_of_current_month - datetime.timedelta(days=1)
+        previous_month = last_month_last_day.strftime("%Y-%m")
 
-    #     leaderboard = "\n".join(
-    #         [f"{index+1}. {nickname}: {checkins} check-ins" for index, (_, checkins, nickname) in enumerate(rankings)]
-    #     )
+        rows = get_monthly_checkins(guild_id, previous_month)
 
-    #     await ctx.send(f"## Current Month's Leaderboard ({current_month})\n{leaderboard}")
+        if not rows:
+            await interaction.response.send_message("No check-ins for the previous month!")
+            log_command_failure(interaction, "prev_rank", "No check-ins found for previous month.")
+            return
+
+        # Only show top 10
+        leaderboard = "\n".join(
+            [f"{index+1}. {row['nickname']}: {row['checkins']} check-ins" for index, row in enumerate(rows[:10])]
+        )
+
+        await interaction.response.send_message(f"## Previous Month's Leaderboard ({previous_month})\n{leaderboard}")
+
+    
+    # top 3 winners
+    @app_commands.command(name='winners', description="View the previous month's top 3 leaderboard.")
+    async def winners(self, interaction: Interaction):
+        log_command_usage(interaction, "winners")
+
+        guild_id = str(interaction.guild.id)
+
+        # Calculate previous month
+        now = datetime.datetime.now()
+        first_day_of_current_month = now.replace(day=1)
+        last_month_last_day = first_day_of_current_month - datetime.timedelta(days=1)
+        previous_month = last_month_last_day.strftime("%Y-%m")
+
+        rows = get_monthly_checkins(guild_id, previous_month)
+
+        if not rows:
+            await interaction.response.send_message("No check-ins for the previous month!")
+            log_command_failure(interaction, "prev_rank", "No check-ins found for previous month.")
+            return
+
+        # Only show top 3, not admin
+        leaderboard = "\n".join(
+            [f"{index+1}. {row['nickname']}: {row['checkins']} check-ins" for index, row in enumerate(rows[:3])]
+        )
+
+        await interaction.response.send_message(f"## Previous Month's Leaderboard ({previous_month})\n{leaderboard}")
 
 async def setup(bot):
     await bot.add_cog(Rankings(bot))
