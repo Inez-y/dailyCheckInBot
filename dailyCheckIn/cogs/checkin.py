@@ -30,7 +30,7 @@ class CheckIn(commands.Cog):
         else:
             # To the discord server
             await interaction.response.send_message(
-                f'{interaction.user.mention} checked {monthly_count} time(s) this month · 📊 {total_count} time(s) in total'
+                f'{interaction.user.mention} chcked in! {monthly_count} time(s) this month · {total_count} time(s) in total'
             )
             
 async def setup(bot):
