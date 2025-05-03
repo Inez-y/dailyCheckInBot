@@ -1,13 +1,15 @@
-import datetime
 from discord.ext import commands
 from discord import Interaction, app_commands, Member
 from utils.helpers import log_command_usage
 from utils.database import manual_add_checkin
-
+import datetime
 import shutil
 import datetime
 
 class Admin(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        
     # Manually add cheeckin for a user
     @app_commands.command(name='admin_add_checkin', description="Admin command to manually add a check-in for a user.")
     @app_commands.describe(member="The user you want to add a check-in for")
@@ -33,8 +35,6 @@ class Admin(commands.Cog):
         shutil.copyfile("checkins.db", backup_filename)
 
         await interaction.response.send_message(f"Backup created: `{backup_filename}` by ", ephemeral=True)
-
-
 
 async def setup(bot):
     await bot.add_cog(Admin(bot))

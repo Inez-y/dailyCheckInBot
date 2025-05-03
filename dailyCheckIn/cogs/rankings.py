@@ -59,7 +59,7 @@ class Rankings(commands.Cog):
         await interaction.response.send_message(f"## Previous Month's Leaderboard ({previous_month})\n{leaderboard}")
 
     
-    # top 3 winners
+    # top 3 winners from the previous month
     @app_commands.command(name='winners', description="View the previous month's top 3 leaderboard.")
     async def winners(self, interaction: Interaction):
         log_command_usage(interaction, "winners")
@@ -78,13 +78,18 @@ class Rankings(commands.Cog):
             await interaction.response.send_message("No check-ins for the previous month!")
             log_command_failure(interaction, "prev_rank", "No check-ins found for previous month.")
             return
+        
+        # Admins are excluded
+        rows = [r for r in rows if r['nickname'] != 'Admin']
 
-        # Only show top 3, not admin
+        medals = ["🥇", "🥈", "🥉"]
         leaderboard = "\n".join(
-            [f"{index+1}. {row['nickname']}: {row['checkins']} check-ins" for index, row in enumerate(rows[:3])]
+            [f"{medals[index]} {row['nickname']}: {row['checkins']} check-ins" for index, row in enumerate(rows[:3])]
         )
 
-        await interaction.response.send_message(f"## Previous Month's Leaderboard ({previous_month})\n{leaderboard}")
+        await interaction.response.send_message(
+            f"🏆 **Previous Month's Top 3 Check-ins ({previous_month})**\n\n{leaderboard}"
+        )
 
 async def setup(bot):
     await bot.add_cog(Rankings(bot))

@@ -5,6 +5,9 @@ from utils.helpers import log_command_usage
 from utils.database import add_checkin
 
 class CheckIn(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
     @app_commands.command(name="checkin", description="Check in for the day.")
     async def checkin(self, interaction: Interaction):
         log_command_usage(interaction, "checkin")

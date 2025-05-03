@@ -1,6 +1,8 @@
+import datetime
 import os
 import asyncio
-# import aiomysql
+import shutil
+import aiomysql
 from dotenv import load_dotenv
 from utils.helpers import print_with_timestamp
 
@@ -16,11 +18,6 @@ DB_SSL = os.getenv("sslmode")
 db_pool = None
 
 # Connection
-# def get_db_connection():
-#     conn = sqlite3.connect(DB_FILE)
-#     conn.row_factory = sqlite3.Row
-#     print_with_timestamp("Getting database connection...")
-#     return conn
 async def init_db_pool():
     global db_pool
     db_pool = await aiomysql.create_pool(
@@ -34,25 +31,6 @@ async def init_db_pool():
     print_with_timestamp("Connected to MySQL database.")
 
 # Setup
-# def setup_database():
-#     print_with_timestamp("Setting up database...")
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-
-#     # Create tables
-#     cursor.execute('''
-#         CREATE TABLE IF NOT EXISTS checkins (
-#             guild_id TEXT,
-#             user_id TEXT,
-#             nickname TEXT,
-#             checkin_date TEXT,
-#             PRIMARY KEY (guild_id, user_id, checkin_date)
-#         )
-#     ''')
-
-#     conn.commit()
-#     conn.close()
-
 async def setup_database():
     async with db_pool.acquire() as conn:
         async with conn.cursor() as cursor:
@@ -66,7 +44,6 @@ async def setup_database():
                 )
             ''')
             print_with_timestamp("✅ Table checkins ensured.")
-
 
 # Backup
 def backup_database():
@@ -82,24 +59,6 @@ async def auto_backup_loop():
         backup_database()
         
 # Checkins
-# def add_checkin(guild_id, user_id, nickname, checkin_date):
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-
-#     try:
-#         cursor.execute('''
-#             INSERT INTO checkins (guild_id, user_id, nickname, checkin_date)
-#             VALUES (?, ?, ?, ?)
-#         ''', (guild_id, user_id, nickname, checkin_date))
-#         conn.commit()
-#         print_with_timestamp("Added to the database...")
-#     except sqlite3.IntegrityError:
-#         # Already checked in today
-#         return False
-#     finally:
-#         conn.close()
-    
-#     return True
 async def add_checkin(guild_id, user_id, nickname, checkin_date):
     async with db_pool.acquire() as conn:
         async with conn.cursor() as cursor:
@@ -113,25 +72,7 @@ async def add_checkin(guild_id, user_id, nickname, checkin_date):
                 print_with_timestamp(f"❌ DB Insert Failed: {e}")
                 return False
 
-            
-
 # Monthly checkin ranking
-# def get_monthly_checkins(guild_id, month_prefix):
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-
-#     cursor.execute('''
-#         SELECT user_id, nickname, COUNT(*) as checkins
-#         FROM checkins
-#         WHERE guild_id = ? AND checkin_date LIKE ?
-#         GROUP BY user_id
-#         ORDER BY checkins DESC
-#     ''', (guild_id, f"{month_prefix}%"))
-
-#     rows = cursor.fetchall()
-#     conn.close()
-#     return rows
-
 async def get_monthly_checkins(guild_id, month_prefix):
     async with db_pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cursor:
@@ -144,19 +85,5 @@ async def get_monthly_checkins(guild_id, month_prefix):
             ''', (guild_id, f"{month_prefix}%"))
             return await cursor.fetchall()
 
-# Add a user manually for an admin
-# def manual_add_checkin(guild_id, user_id, nickname, checkin_date):
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-
-#     # INSERT OR IGNORE: if the check-in already exists, do nothing
-#     try:
-#         cursor.execute('''
-#             INSERT OR IGNORE INTO checkins (guild_id, user_id, nickname, checkin_date)
-#             VALUES (?, ?, ?, ?)
-#         ''', (guild_id, user_id, nickname, checkin_date))
-#         conn.commit()
-#     finally:
-#         conn.close()
 async def manual_add_checkin(guild_id, user_id, nickname, checkin_date):
     await add_checkin(guild_id, user_id, nickname, checkin_date)
