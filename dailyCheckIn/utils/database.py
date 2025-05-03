@@ -43,7 +43,7 @@ async def setup_database():
                     PRIMARY KEY (guild_id, user_id, checkin_date)
                 )
             ''')
-            print_with_timestamp("✅ Table checkins ensured.")
+            print_with_timestamp("Table checkins ensured.")
 
 # Backup
 def backup_database():

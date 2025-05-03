@@ -22,7 +22,7 @@ class Admin(commands.Cog):
         nickname = member.display_name
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-        manual_add_checkin(guild_id, user_id, nickname, current_date)
+        await manual_add_checkin(guild_id, user_id, nickname, current_date)
 
         await interaction.response.send_message(f"Added a manual check-in for {member.mention} on {current_date} for {guild_id} by {user_id}.")
 
