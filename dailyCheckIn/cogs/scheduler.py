@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 
 # General channel
 load_dotenv()
-CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
+# CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
+CHANNEL_ID = os.getenv('CHANNEL_ID')
 
 # For testing, add
 # if now.minute % 1 == 0:  # every minute instead of 1st day 9AM
