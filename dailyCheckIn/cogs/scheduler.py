@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import os
-from utils.database import get_monthly_checkins
+from utils.database import db
 from utils.helpers import print_with_timestamp
 from dotenv import load_dotenv
 
@@ -52,7 +52,7 @@ async def send_top3(bot):
 
     guild_id = str(channel.guild.id)
 
-    rows = get_monthly_checkins(guild_id, previous_month)
+    rows = db.get_monthly_checkins(guild_id, previous_month)
 
     if not rows:
         await channel.send(f"❌ No check-ins for {previous_month}.")

@@ -1,7 +1,7 @@
 from discord.ext import commands
 from discord import Interaction, app_commands, Member
 from utils.helpers import log_command_usage
-from utils.database import manual_add_checkin
+from utils.database import db
 import datetime
 import shutil
 import datetime
@@ -22,7 +22,7 @@ class Admin(commands.Cog):
         nickname = member.display_name
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-        await manual_add_checkin(guild_id, user_id, nickname, current_date)
+        await db.manual_add_checkin(guild_id, user_id, nickname, current_date)
 
         await interaction.response.send_message(f"Added a manual check-in for {member.mention} on {current_date} for {guild_id} by {user_id}.")
 

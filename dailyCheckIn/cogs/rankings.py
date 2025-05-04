@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import Interaction, app_commands
 from utils.helpers import get_current_month, log_command_failure
 from utils.helpers import log_command_usage
-from utils.database import get_monthly_checkins
+from utils.database import db
 
 class Rankings(commands.Cog):
     def __init__(self, bot):
@@ -17,7 +17,7 @@ class Rankings(commands.Cog):
         guild_id = str(interaction.guild.id)
         current_month = get_current_month()
 
-        rows = await get_monthly_checkins(guild_id, current_month)
+        rows = await db.get_monthly_checkins(guild_id, current_month)
 
         if not rows:
             await interaction.response.send_message("No check-ins for this month yet!")
@@ -44,7 +44,7 @@ class Rankings(commands.Cog):
         last_month_last_day = first_day_of_current_month - datetime.timedelta(days=1)
         previous_month = last_month_last_day.strftime("%Y-%m")
 
-        rows = await get_monthly_checkins(guild_id, previous_month)
+        rows = await db.get_monthly_checkins(guild_id, previous_month)
 
         if not rows:
             await interaction.response.send_message("No check-ins for the previous month!")
@@ -72,7 +72,7 @@ class Rankings(commands.Cog):
         last_month_last_day = first_day_of_current_month - datetime.timedelta(days=1)
         previous_month = last_month_last_day.strftime("%Y-%m")
 
-        rows = await get_monthly_checkins(guild_id, previous_month)
+        rows = await db.get_monthly_checkins(guild_id, previous_month)
 
         if not rows:
             await interaction.response.send_message("No check-ins for the previous month!")

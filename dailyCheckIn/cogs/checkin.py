@@ -2,7 +2,7 @@ from discord.ext import commands
 from discord import app_commands, Interaction
 import datetime
 from utils.helpers import get_current_month, log_command_usage
-from utils.database import add_checkin, count_user_checkins
+from utils.database import db
 
 class CheckIn(commands.Cog):
     def __init__(self, bot):
@@ -18,11 +18,11 @@ class CheckIn(commands.Cog):
         current_time = datetime.datetime.now()
         current_date = current_time.strftime("%Y-%m-%d")
 
-        success = await add_checkin(guild_id, user_id, nickname, current_date)
+        success = await db.add_checkin(guild_id, user_id, nickname, current_date)
 
         # Get stats regardless of whether it was a duplicate
         current_month = get_current_month()
-        monthly_count, total_count = await count_user_checkins(guild_id, user_id, current_month)
+        monthly_count, total_count = await db.count_user_checkins(guild_id, user_id, current_month)
         
         if not success:
             # To the discord server
