@@ -9,7 +9,9 @@ from utils.helpers import print_with_timestamp
 
 load_dotenv()
 
-ssl_context = ssl.create_default_context(cafile="checkInBotKey/ca-certificate.crt")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+CA_FILE = os.path.join(BASE_DIR, "checkInBotKey", "ca-certificate.crt")
+ssl_context = ssl.create_default_context(cafile=CA_FILE)
 
 DB_HOST = os.getenv("host")
 DB_PORT = int(os.getenv("port", 25060))
