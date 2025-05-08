@@ -9,8 +9,10 @@ from utils.helpers import print_with_timestamp
 
 load_dotenv()
 
+ssl_context = ssl.create_default_context(cafile="checkInBotKey/ca-certificate.crt")
+
 DB_HOST = os.getenv("host")
-DB_PORT = int(os.getenv("port", 3306))
+DB_PORT = int(os.getenv("port", 25060))
 DB_USER = os.getenv("username")
 DB_PASS = os.getenv("password")
 DB_NAME = os.getenv("database")
