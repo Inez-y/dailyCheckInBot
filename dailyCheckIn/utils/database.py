@@ -30,7 +30,6 @@ class Database:
 
     async def connect(self):
         if self.pool is None:
-            ssl_ctx = ssl.create_default_context()
             self.pool = await aiomysql.create_pool(
                 host=DB_HOST,
                 port=DB_PORT,
@@ -38,7 +37,7 @@ class Database:
                 password=DB_PASS,
                 db=DB_NAME,
                 autocommit=True,
-                ssl=ssl_ctx
+                ssl=ssl_context
             )
             print_with_timestamp("Connected to MySQL database.")
 
