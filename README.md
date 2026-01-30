@@ -15,7 +15,7 @@ A Discord bot that lets server members **check in once per day**, tracks **month
 * Admin-only:
 
   * `admin_add_checkin` — manually add a check-in for a member
-  * `admin_backup`* — manual DB backup (see notes below)
+  * `admin_backup` — manual DB backup (see notes below)
 
 ## Commands
 
