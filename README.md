@@ -4,18 +4,18 @@ A Discord bot that lets server members **check in once per day**, tracks **month
 
 ## Features
 
-* `**/checkin**` — users check in for the day (1 per day)
+* `checkin` — users check in for the day (1 per day)
 * Shows user stats:
 
   * check-ins current month
   * check-ins all time
-* `**/ranking**` — current month leaderboard
-* `**/prev_rank**` — previous month top 10
-* `**/winners**` — previous month top 3 (medals)
+* `ranking` — current month leaderboard
+* `prev_rank` — previous month top 10
+* `winners` — previous month top 3 (medals)
 * Admin-only:
 
-  * `**/admin_add_checkin**` — manually add a check-in for a member
-  * `**/admin_backup*`* — manual DB backup (see notes below)
+  * `admin_add_checkin` — manually add a check-in for a member
+  * `admin_backup`* — manual DB backup (see notes below)
 
 ## Commands
 
