@@ -9,7 +9,7 @@ from utils.helpers import print_with_timestamp
 
 load_dotenv()
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CA_FILE = os.path.join(BASE_DIR, "checkInBotKey", "ca-certificate.crt")
 ssl_context = ssl.create_default_context(cafile=CA_FILE)
 
@@ -30,6 +30,10 @@ class Database:
 
     async def connect(self):
         if self.pool is None:
+            ssl_context = None
+            if os.path.exists(CA_FILE):
+                ssl_context = ssl.create_default_context(cafile=CA_FILE)
+
             self.pool = await aiomysql.create_pool(
                 host=DB_HOST,
                 port=DB_PORT,

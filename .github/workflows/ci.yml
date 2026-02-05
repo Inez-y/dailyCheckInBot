@@ -17,9 +17,10 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r dailyCheckIn/requirements.txt
+          pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
       - name: Run tests
-        working-directory: dailyCheckIn
-        run: pytest -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pytest -q

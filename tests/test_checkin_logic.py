@@ -1,5 +1,6 @@
 import datetime
 import pytest
+from cogs.checkin import CheckIn
 
 @pytest.mark.asyncio
 async def test_checkin_db_called(monkeypatch):

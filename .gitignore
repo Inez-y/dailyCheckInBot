@@ -1,7 +1,5 @@
 .env
-checkins.json
 .venv
-checkInBotKey
 
 checkins.db
 *.db
