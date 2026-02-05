@@ -19,7 +19,11 @@ def create_bot() -> commands.Bot:
 
 # Load Cogs (Modules)
 bot = create_bot()
-COGS = ["cogs.checkin", "cogs.rankings", "cogs.admin"]
+COGS = [
+  "dailyCheckIn.cogs.checkin",
+  "dailyCheckIn.cogs.rankings",
+  "dailyCheckIn.cogs.admin",
+]
 
 # Functions
 @bot.event
