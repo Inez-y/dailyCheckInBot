@@ -31,4 +31,5 @@ async def test_checkin_db_called(monkeypatch):
     monkeypatch.setattr("utils.database.db.count_user_checkins", fake_count_user_checkins)
 
     cog = CheckIn(bot=None)
-    await cog.checkin(DummyInteraction())
+
+    await CheckIn.checkin.callback(cog, DummyInteraction())
