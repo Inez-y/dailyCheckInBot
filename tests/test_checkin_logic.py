@@ -1,6 +1,4 @@
-import datetime
 import pytest
-from cogs.checkin import CheckIn
 
 @pytest.mark.asyncio
 async def test_checkin_db_called(monkeypatch):
@@ -23,7 +21,6 @@ async def test_checkin_db_called(monkeypatch):
         user = DummyUser()
         response = DummyResponse()
 
-    # Patch db methods
     async def fake_add_checkin(guild_id, user_id, nickname, current_date):
         return True
 
