@@ -1,4 +1,4 @@
-from utils.helpers import get_current_month
+from dailyCheckIn.utils.helpers import get_current_month
 
 def test_get_current_month_format():
     m = get_current_month()
